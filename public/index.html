@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ピースホーム｜業務プロセス＆着工完工 統合ダッシュボード</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏠%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#FAFAF7;--surface:#FFFFFF;--surface-2:#F3F0E8;
+    --ink:#1A1A17;--ink-2:#4B4A44;--ink-3:#8A8880;
+    --rule:#E5E2D8;--rule-2:#D8D4C7;
+    --accent:#0F4C3A;--accent-2:#1A6A52;
+    --good:#3D7A5C;--warn:#C48A2C;--bad:#B03A2E;
+    --brand-hinata:#E88B3A;--brand-ph:#B8B4A6;
+    --brand-struct:#7BB88E;--brand-long:#D67B7B;
+    --shadow:0 1px 0 rgba(20,20,15,.04), 0 8px 24px -12px rgba(20,20,15,.10);
+    --radius:8px;
+    --font-display:'Hiragino Mincho ProN','Yu Mincho','Times New Roman',serif;
+    --font-body:'Hiragino Kaku Gothic ProN','Yu Gothic UI',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-mono:'SF Mono',Consolas,'Yu Gothic UI',ui-monospace,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#141412;--surface:#1E1E1B;--surface-2:#26251F;--ink:#F0EFEA;--ink-2:#C6C3B8;--ink-3:#8C897E;--rule:#2E2D27;--rule-2:#3A3831;--accent:#5FB58D;--accent-2:#7CCFA6}
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.55}
+  .page{max-width:1440px;margin:0 auto;padding:28px 24px 80px}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+  .brand{display:flex;align-items:baseline;gap:14px}
+  .brand-mark{width:26px;height:26px;border:1.5px solid var(--accent);position:relative;transform:rotate(45deg);flex-shrink:0;margin-bottom:-3px}
+  .brand-mark::before{content:"";position:absolute;inset:5px;background:var(--accent)}
+  h1{font-family:var(--font-display);font-weight:600;font-size:24px;letter-spacing:.02em;margin:0}
+  .subtitle{font-family:var(--font-display);font-size:12px;color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
+  .sync-status{display:flex;gap:6px;align-items:center;font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+  .sync-status .dot{width:8px;height:8px;border-radius:50%;background:var(--good);animation:pulse 2s infinite}
+  .sync-status .dot.err{background:var(--bad);animation:none}
+  .sync-status .dot.load{background:var(--warn)}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+  .reload-btn{font-family:var(--font-body);font-size:11px;padding:4px 9px;background:var(--surface);color:var(--ink-2);border:1px solid var(--rule-2);border-radius:4px;cursor:pointer}
+  .reload-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:16px}
+  .loading-overlay.hidden{display:none}
+  .spinner{width:40px;height:40px;border:3px solid var(--rule);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-overlay p{font-family:var(--font-display);color:var(--ink-2);margin:0}
+
+  .error-banner{background:linear-gradient(180deg, color-mix(in srgb, var(--bad) 8%, var(--surface)), var(--surface));border-left:4px solid var(--bad);padding:14px 18px;border-radius:var(--radius);margin-bottom:20px;font-size:13px;color:var(--ink-2)}
+  .error-banner strong{color:var(--bad)}
+  .error-banner pre{font-family:var(--font-mono);font-size:11px;background:var(--surface-2);padding:8px 10px;border-radius:4px;overflow:auto;margin-top:8px}
+
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--rule);margin-bottom:26px;overflow-x:auto}
+  .tab{padding:14px 22px;font-family:var(--font-display);font-size:14px;font-weight:500;color:var(--ink-3);letter-spacing:.05em;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;background:none;border-left:none;border-right:none;border-top:none}
+  .tab:hover{color:var(--ink-2)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .tab .badge{display:inline-block;margin-left:8px;font-family:var(--font-mono);font-size:10px;padding:1px 6px;border-radius:100px;background:var(--surface-2);color:var(--ink-3)}
+  .tab.active .badge{background:var(--accent);color:#fff}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  .kpi-strip{display:grid;grid-template-columns:repeat(8,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow)}
+  .kpi{background:var(--surface);padding:14px 12px 12px;display:flex;flex-direction:column;gap:5px;min-width:0}
+  .kpi .no{font-family:var(--font-display);font-size:11px;color:var(--ink-3);letter-spacing:.14em}
+  .kpi .label{font-size:11.5px;color:var(--ink-2);line-height:1.35;font-weight:500;min-height:32px}
+  .kpi .value{font-family:var(--font-mono);font-size:21px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;display:flex;align-items:baseline;gap:3px}
+  .kpi .value .unit{font-size:10.5px;color:var(--ink-3);font-weight:400;font-family:var(--font-body)}
+  .kpi .target{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .kpi .bar{height:3px;background:var(--rule-2);border-radius:2px;overflow:hidden;margin-top:3px;position:relative}
+  .kpi .bar > i{position:absolute;top:0;bottom:0;left:0;border-radius:2px}
+  .kpi.good .value{color:var(--good)} .kpi.good .bar > i{background:var(--good)}
+  .kpi.warn .value{color:var(--warn)} .kpi.warn .bar > i{background:var(--warn)}
+  .kpi.bad .value{color:var(--bad)} .kpi.bad .bar > i{background:var(--bad)}
+  .kpi.empty .value{color:var(--ink-3)}
+
+  .filters{display:flex;flex-wrap:wrap;gap:18px 22px;align-items:center;margin-bottom:22px;padding:12px 18px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius)}
+  .filter-group{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .filter-label{font-family:var(--font-display);font-size:11px;color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase;margin-right:2px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:100px;background:var(--surface-2);color:var(--ink-2);font-size:12px;border:1px solid transparent;cursor:pointer;user-select:none;transition:all .15s}
+  .chip:hover{border-color:var(--rule-2)}
+  .chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .chip .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .chip[data-cat="ph"] .dot{background:var(--brand-ph);border:1px solid var(--rule-2)}
+  .chip[data-cat="hinata"] .dot{background:var(--brand-hinata)}
+  .chip[data-cat="struct"] .dot{background:var(--brand-struct)}
+  .chip[data-cat="long"] .dot{background:var(--brand-long)}
+  .filter-count{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-left:auto}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:22px}
+  @media (max-width:1050px){.grid-2,.grid-3{grid-template-columns:1fr}}
+  section.panel{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+  section.panel > h2{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.06em;margin:0 0 3px}
+  section.panel > .h-sub{font-size:11px;color:var(--ink-3);letter-spacing:.06em;margin-bottom:14px}
+
+  .comp{display:flex;flex-direction:column;gap:12px}
+  .comp .row{display:grid;grid-template-columns:110px 1fr 76px;align-items:center;gap:12px}
+  .comp .rowlabel{font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:7px;min-width:0}
+  .comp .rowlabel .swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+  .comp .rowlabel span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .comp .track{position:relative;height:20px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+  .comp .track > i{position:absolute;top:0;bottom:0;left:0;border-radius:3px;transition:width .4s}
+  .comp .track > .target{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.5}
+  .comp .track > .target::after{content:attr(data-label);position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:10px;color:var(--ink-3);white-space:nowrap}
+  .comp .metric{font-family:var(--font-mono);font-size:13px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+  .comp .metric .n{font-size:10.5px;color:var(--ink-3)}
+
+  .alert-panel{background:linear-gradient(180deg, color-mix(in srgb, var(--bad) 6%, var(--surface)), var(--surface));border-left:4px solid var(--bad)}
+  .alert-panel h2{color:var(--bad)}
+  .alert-list{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto}
+  .alert-item{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;padding:9px 12px;background:var(--surface);border:1px solid var(--rule);border-radius:5px;align-items:center;font-size:12.5px}
+  .alert-item .adv-tag{font-family:var(--font-mono);font-size:11px;background:var(--bad);color:#fff;padding:2px 8px;border-radius:100px;font-weight:600}
+  .alert-item .name-line{color:var(--ink);font-weight:500}
+  .alert-item .name-line small{color:var(--ink-3);font-weight:400;margin-left:6px;font-size:11px}
+  .alert-item .days{font-family:var(--font-mono);color:var(--bad);font-weight:600;font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+  .alert-item .status{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);text-align:right}
+  .alert-panel .empty-state{color:var(--good);font-family:var(--font-display);padding:16px}
+
+  .table-wrap{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:22px;overflow:hidden}
+  .table-scroll{overflow-x:auto}
+  .table-head{display:flex;justify-content:space-between;align-items:baseline;padding:14px 18px 8px;gap:16px}
+  .table-head h2{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.06em;margin:0}
+  .table-head .h-sub{font-size:11px;color:var(--ink-3);letter-spacing:.06em}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:middle;white-space:nowrap}
+  thead th{font-family:var(--font-display);font-weight:500;font-size:11px;letter-spacing:.05em;color:var(--ink-3);background:var(--surface);position:sticky;top:0;text-transform:uppercase;border-bottom:1.5px solid var(--rule-2)}
+  thead th .tg{display:block;font-family:var(--font-mono);font-size:10px;color:var(--ink-3);font-weight:400;text-transform:none;margin-top:1px}
+  tbody td{color:var(--ink-2)}
+  tbody tr:hover{background:var(--surface-2)}
+  td.num{font-family:var(--font-mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  td.num.good{color:var(--good);font-weight:600}
+  td.num.warn{color:var(--warn);font-weight:600}
+  td.num.bad{color:var(--bad);font-weight:600}
+  td.num.empty{color:var(--ink-3);font-weight:400}
+  .brand-tag{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  td.who{font-size:11px;color:var(--ink-2)}
+
+  .hero-wrap{background:linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--accent) 5%, var(--surface)) 100%);border:1px solid var(--rule);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 26px;margin-bottom:22px;position:relative;overflow:hidden}
+  .hero-wrap::before{content:"";position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle, color-mix(in srgb, var(--accent) 15%, transparent), transparent 70%);pointer-events:none}
+  .hero-grid{display:grid;grid-template-columns:1.2fr 2fr;gap:32px;position:relative}
+  @media (max-width:1000px){.hero-grid{grid-template-columns:1fr}}
+  .hero-current{display:flex;flex-direction:column;gap:12px}
+  .hero-current .h-label{font-family:var(--font-display);font-size:12px;color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase}
+  .hero-current .h-count{font-family:var(--font-mono);font-size:72px;font-weight:600;color:var(--accent);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+  .hero-current .h-count .u{font-size:22px;color:var(--ink-2);font-weight:400;font-family:var(--font-body);margin-left:6px;letter-spacing:0}
+  .hero-current .h-detail{display:flex;gap:20px;font-family:var(--font-mono);font-size:12px;color:var(--ink-2);border-top:1px solid var(--rule);padding-top:12px}
+  .hero-current .h-detail div{display:flex;flex-direction:column;gap:2px}
+  .hero-current .h-detail .d-label{font-family:var(--font-display);font-size:10px;color:var(--ink-3);letter-spacing:.08em}
+  .hero-current .h-detail .d-val{font-size:18px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .hero-forecast{display:flex;flex-direction:column;gap:8px}
+  .hero-forecast .hf-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px}
+  .hero-forecast .hf-title{font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--ink);letter-spacing:.06em}
+  .hero-forecast .hf-sub{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3)}
+  .hero-forecast .hf-total{font-family:var(--font-mono);font-size:22px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+  .hero-forecast .hf-months{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .hero-forecast .hfm{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:9px 10px;display:flex;flex-direction:column;gap:2px;position:relative}
+  .hero-forecast .hfm.this-month{background:color-mix(in srgb, var(--accent) 8%, var(--surface));border-color:var(--accent)}
+  .hero-forecast .hfm .m-mon{font-family:var(--font-display);font-size:11px;color:var(--ink-2);font-weight:500}
+  .hero-forecast .hfm .m-mon .y{font-family:var(--font-mono);color:var(--ink-3);font-size:9px;margin-left:2px}
+  .hero-forecast .hfm .m-count{font-family:var(--font-mono);font-size:20px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
+  .hero-forecast .hfm .m-count .u{font-size:10px;color:var(--ink-3);font-weight:400;font-family:var(--font-body);margin-left:1px}
+  .hero-forecast .hfm .m-revenue{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-variant-numeric:tabular-nums;font-weight:600}
+  .hero-forecast .hfm.this-month::after{content:"今月";position:absolute;top:4px;right:6px;font-family:var(--font-display);font-size:8.5px;color:var(--accent);letter-spacing:.06em;font-weight:600}
+
+  .fy-tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;margin-bottom:22px;box-shadow:var(--shadow)}
+  @media (max-width:900px){.fy-tiles{grid-template-columns:repeat(3,1fr)}}
+  .fy-tile{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:3px}
+  .fy-tile .t-label{font-family:var(--font-display);font-size:10.5px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase}
+  .fy-tile .t-value{font-family:var(--font-mono);font-size:26px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1.1}
+  .fy-tile .t-value .u{font-size:11px;color:var(--ink-3);font-weight:400;font-family:var(--font-body);margin-left:2px}
+  .fy-tile .t-sub{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-top:1px}
+  .fy-tile.accent .t-value{color:var(--accent)}
+  .fy-tile.good .t-value{color:var(--good)}
+  .fy-tile.warn .t-value{color:var(--warn)}
+  .fy-tile .t-mini-bar{height:3px;background:var(--surface-2);border-radius:2px;overflow:hidden;margin-top:4px}
+  .fy-tile .t-mini-bar > i{display:block;height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
+
+  footer.foot{margin-top:36px;padding-top:18px;border-top:1px solid var(--rule);font-family:var(--font-mono);font-size:10px;color:var(--ink-3);display:flex;justify-content:space-between;letter-spacing:.04em}
+
+  .empty-state{text-align:center;padding:32px 20px;color:var(--ink-3);font-family:var(--font-display);font-style:italic}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p>スプレッドシートから最新データを読み込み中...</p>
+</div>
+
+<div class="page">
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="subtitle">Peace Home ／ Ops Command Center</div>
+        <h1>業務プロセス＆着工完工 統合ダッシュボード</h1>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center">
+      <div class="sync-status" id="sync-status">
+        <span class="dot load"></span>
+        <span id="sync-text">同期中...</span>
+      </div>
+      <button class="reload-btn" onclick="location.reload()">↻ 再読込</button>
+    </div>
+  </header>
+
+  <div id="error-slot"></div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="proc">業務プロセス（契約→着工90日）<span class="badge" id="tab1-count">0</span></button>
+    <button class="tab" data-tab="fy">着工・完工管理<span class="badge" id="tab2-count">現状</span></button>
+    <button class="tab" data-tab="km">工務・実行予算<span class="badge" id="tab3-count">0</span></button>
+    <button class="tab" data-tab="fc">来期予測<span class="badge" id="tab4-count">45期</span></button>
+  </nav>
+
+  <!-- Tab 1 -->
+  <div class="tab-panel active" id="panel-proc">
+    <div class="kpi-strip" id="kpi-strip"></div>
+    <div class="filters" id="filters">
+      <div class="filter-group">
+        <span class="filter-label">物件区分</span>
+        <span class="chip active" data-filter="cat" data-value="all">全て</span>
+        <span class="chip" data-filter="cat" data-value="ph" data-cat="ph"><i class="dot"></i>PH注文</span>
+        <span class="chip" data-filter="cat" data-value="hinata" data-cat="hinata"><i class="dot"></i>ひなた工務店</span>
+        <span class="chip" data-filter="cat" data-value="struct" data-cat="struct"><i class="dot"></i>構造計算あり</span>
+        <span class="chip" data-filter="cat" data-value="long" data-cat="long"><i class="dot"></i>長期優良</span>
+      </div>
+      <div class="filter-group"><span class="filter-label">ADV</span><span id="adv-chips"></span></div>
+      <span class="filter-count" id="filter-count"></span>
+    </div>
+
+    <section class="panel alert-panel" style="margin-bottom:22px">
+      <h2>⚠ ADV要対応 ／ 図面確定14日超過アラート</h2>
+      <div class="h-sub">契約〜図面確定はADV(アドバイザー)が握るプロセス。目標14日を超過中の物件を強調</div>
+      <div class="alert-list" id="drawing-alerts"></div>
+    </section>
+
+    <div class="grid-3">
+      <section class="panel"><h2>物件区分別 平均着工日数</h2><div class="h-sub">目標90日に対する区分ごとの傾向</div><div class="comp" id="comp-cat"></div></section>
+      <section class="panel"><h2>ADV別 平均着工日数</h2><div class="h-sub">受注→着工までADVが伴走した実績</div><div class="comp" id="comp-adv"></div></section>
+      <section class="panel"><h2>設計担当別 平均着工日数</h2><div class="h-sub">図面確定以降の設計工程の実力</div><div class="comp" id="comp-design"></div></section>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head"><h2>物件一覧 ／ マイルストーン日数</h2><div class="h-sub">単位：契約日からの経過日数</div></div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>物件</th><th>ADV</th><th>設計</th><th>契約日</th>
+              <th style="text-align:right">①図面<span class="tg">14</span></th>
+              <th style="text-align:right">③仕様確定<span class="tg">70</span></th>
+              <th style="text-align:right">④確認提出<span class="tg">58</span></th>
+              <th style="text-align:right">⑤確認許可<span class="tg">68</span></th>
+              <th style="text-align:right">⑥社内打合<span class="tg">66</span></th>
+              <th style="text-align:right">⑦ANDPAD<span class="tg">72</span></th>
+              <th style="text-align:right">⑧着工<span class="tg">90</span></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2 -->
+  <div class="tab-panel" id="panel-fy">
+    <div class="hero-wrap">
+      <div class="hero-grid">
+        <div class="hero-current">
+          <div class="h-label">■ 現在工事中 物件数</div>
+          <div class="h-count"><span id="hero-inprog">—</span><span class="u">棟</span></div>
+          <div class="h-detail">
+            <div><span class="d-label">ピース注文</span><span class="d-val" id="hero-inprog-ph">—</span></div>
+            <div><span class="d-label">ひなた工務店</span><span class="d-val" id="hero-inprog-hinata">—</span></div>
+            <div><span class="d-label">今月着工予定</span><span class="d-val" id="hero-this-start">—</span></div>
+            <div><span class="d-label">今月完工予定</span><span class="d-val" id="hero-this-finish">—</span></div>
+          </div>
+        </div>
+        <div class="hero-forecast">
+          <div class="hf-head">
+            <div><div class="hf-title">■ これからの完工予定 ／ 6ヶ月 売上予測</div><div class="hf-sub">契約額ベース（税別）</div></div>
+            <div style="text-align:right"><div class="hf-sub">6ヶ月 合計売上見込み</div><div class="hf-total"><span id="hero-fc-total">—</span></div></div>
+          </div>
+          <div class="hf-months" id="hero-forecast-months"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fy-tiles" id="fy-tiles"></div>
+
+    <div class="table-wrap">
+      <div class="table-head"><h2>ADV別 受注→着工→完工の進捗</h2></div>
+      <div class="table-scroll"><table id="adv-summary-table"></table></div>
+    </div>
+  </div>
+
+  <!-- Tab 3 -->
+  <div class="tab-panel" id="panel-km">
+    <div class="grid-3" style="margin-bottom:22px">
+      <section class="panel">
+        <h2>実行予算 作成率</h2>
+        <div class="h-sub">社内打合済 物件のうち予算〆日が入力済の割合</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px">
+          <span id="km-rate-value" style="font-family:var(--font-mono);font-size:32px;font-weight:600;color:var(--accent)">—</span>
+          <span style="font-family:var(--font-mono);font-size:13px;color:var(--ink-3)" id="km-rate-detail">— / —</span>
+        </div>
+        <div style="margin-top:10px;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden"><i id="km-rate-bar" style="display:block;height:100%;background:var(--accent);width:0%"></i></div>
+      </section>
+      <section class="panel">
+        <h2>社内打合〜予算〆 平均リードタイム</h2>
+        <div class="h-sub">目標14日</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px">
+          <span id="km-lt-value" style="font-family:var(--font-mono);font-size:32px;font-weight:600">—</span>
+          <span style="font-family:var(--font-mono);font-size:13px;color:var(--ink-3)">日 ／ n=<span id="km-lt-n">0</span></span>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>完工物件 平均損益率</h2>
+        <div class="h-sub">契約時→実際の変化</div>
+        <div style="display:flex;align-items:baseline;gap:16px;margin-top:12px">
+          <div><div style="font-family:var(--font-display);font-size:10px;color:var(--ink-3)">契約時</div><div id="km-gm-contract" style="font-family:var(--font-mono);font-size:22px;font-weight:600;color:var(--ink-2)">—</div></div>
+          <div style="color:var(--ink-3);margin-top:14px">→</div>
+          <div><div style="font-family:var(--font-display);font-size:10px;color:var(--ink-3)">実際</div><div id="km-gm-actual" style="font-family:var(--font-mono);font-size:22px;font-weight:600">—</div></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel alert-panel" style="margin-bottom:22px">
+      <h2>⚠ 工務要対応 ／ 社内打合済なのに実行予算 未作成</h2>
+      <div class="h-sub">社内打合が終わった時点で実行予算作成が始まります</div>
+      <div class="alert-list" id="km-budget-alerts"></div>
+    </section>
+
+    <div class="table-wrap">
+      <div class="table-head"><h2>ADV別 契約額傾向と最終損益</h2></div>
+      <div class="table-scroll"><table id="km-adv-table"></table></div>
+    </div>
+  </div>
+
+  <!-- Tab 4 -->
+  <div class="tab-panel" id="panel-fc">
+    <section class="panel" style="margin-bottom:22px">
+      <h2>■ 予測前提</h2>
+      <div class="h-sub">既存物件データから自動計算。数値変更でシミュレーション更新</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:14px">
+        <div><label style="font-family:var(--font-display);font-size:11px;color:var(--ink-3)">契約→着工 リードタイム（日）</label><input id="fc-lead-start" type="number" step="1" value="130" style="width:100%;padding:6px 9px;font-family:var(--font-body);background:var(--bg);color:var(--ink);border:1px solid var(--rule-2);border-radius:4px;margin-top:4px"><div style="font-size:11px;color:var(--ink-3);margin-top:2px" id="fc-lead-start-actual">実測: —</div></div>
+        <div><label style="font-family:var(--font-display);font-size:11px;color:var(--ink-3)">着工→完工 工事期間（日）</label><input id="fc-lead-work" type="number" step="1" value="140" style="width:100%;padding:6px 9px;font-family:var(--font-body);background:var(--bg);color:var(--ink);border:1px solid var(--rule-2);border-radius:4px;margin-top:4px"><div style="font-size:11px;color:var(--ink-3);margin-top:2px" id="fc-lead-work-actual">実測: —</div></div>
+        <div><label style="font-family:var(--font-display);font-size:11px;color:var(--ink-3)">予測開始年月</label><input id="fc-start-ym" type="month" value="2026-09" style="width:100%;padding:6px 9px;font-family:var(--font-body);background:var(--bg);color:var(--ink);border:1px solid var(--rule-2);border-radius:4px;margin-top:4px"></div>
+        <div><label style="font-family:var(--font-display);font-size:11px;color:var(--ink-3)">期の名称</label><input id="fc-fy-label" type="text" value="45期" style="width:100%;padding:6px 9px;font-family:var(--font-body);background:var(--bg);color:var(--ink);border:1px solid var(--rule-2);border-radius:4px;margin-top:4px"></div>
+      </div>
+    </section>
+
+    <div class="fy-tiles" id="fc-tiles"></div>
+
+    <div class="table-wrap">
+      <div class="table-head"><h2>■ ADV別 月次受注目標</h2><div class="h-sub">セル編集可 ／ 変更するとシミュレーションが更新</div></div>
+      <div class="table-scroll"><table style="font-size:12px" id="fc-target-table"><thead id="fc-target-thead"></thead><tbody id="fc-target-tbody"></tbody></table></div>
+    </div>
+
+    <section class="panel" style="margin-bottom:22px;background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, var(--surface)), var(--surface));border-left:4px solid var(--accent)">
+      <h2 style="color:var(--accent)">■ 予測から見える来期の構造</h2>
+      <div id="fc-insights" style="margin-top:10px;font-size:13px;line-height:1.75;color:var(--ink-2)"></div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <span>PEACE HOME × Pure Growth</span>
+    <span id="foot-updated">—</span>
+  </footer>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

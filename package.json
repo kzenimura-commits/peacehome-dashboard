@@ -1,0 +1,21 @@
+{
+  "name": "peacehome-dashboard",
+  "version": "1.0.1",
+  "description": "Peace Home 業務プロセス＆着工完工 統合ダッシュボード",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/node": "^3.2.0",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}
